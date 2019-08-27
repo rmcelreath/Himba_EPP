@@ -60,6 +60,18 @@ m1 <- ulam(
 
 precis(m1,prob=0.95)
 
+# incorporating 5% false positive paternity assignment
+m1f <- ulam(
+    alist(
+        y|y==1 ~ custom( log_mix( 
+            0.95 ,
+            bernoulli_lpmf( 1 | p ),
+            bernoulli_lpmf( 0 | p )
+        )),
+        y|y==0 ~ bernoulli( p ),
+        p ~ beta(2,2) # 2,20 gives a prior skewed to small values
+    ) , data=dat_list , chains=4 , sample=TRUE )
+
 # model clustering on mom
 # need to use non-centered parameterization due to sparseness for many mothers
 m2 <- ulam(
@@ -74,6 +86,27 @@ m2 <- ulam(
 
 precis(m2)
 post <- extract.samples(m2)
+p <- inv_logit(post$a)
+precis(list(p=p),prob=0.95)
+
+# with false positive rate
+m2f <- ulam(
+    alist(
+        y|y==1 ~ custom( log_mix( 
+            0.95 ,
+            bernoulli_lpmf( 1 | p ),
+            bernoulli_lpmf( 0 | p )
+        )),
+        y|y==0 ~ bernoulli( p ),
+        logit(p) <- a + z[mom_id]*sigma,
+        a ~ normal(0,1.5),
+        z[mom_id] ~ normal(0,1),
+        sigma ~ normal(0,1)
+    ) , data=dat_list , chains=4 , log_lik=FALSE , 
+    constraints=list(sigma="lower=0") )
+
+precis(m2f)
+post <- extract.samples(m2f)
 p <- inv_logit(post$a)
 precis(list(p=p),prob=0.95)
 
@@ -109,6 +142,31 @@ post3 <- extract.samples(m3)
 p3 <- inv_logit( post3$a )
 precis( list(p=p3) , prob=0.95 )
 
+# now with false positive rate
+m3f <- ulam(
+    alist(
+        y|y==1 ~ custom( log_mix( 
+            0.95 ,
+            bernoulli_lpmf( 1 | p ),
+            bernoulli_lpmf( 0 | p )
+        )),
+        y|y==0 ~ bernoulli( p ),
+        logit(p) <- a + z[mom_id]*sigma + x[dyad_id]*tau,
+        a ~ normal(0,1.5),
+        z[mom_id] ~ normal(0,1),
+        sigma ~ normal(0,1),
+        x[dyad_id] ~ normal(0,1),
+        tau ~ normal(0,1)
+    ) , data=dat_list , chains=4 , iter=4000 , log_lik=FALSE ,
+    constraints=list(sigma="lower=0",tau="lower=0") )
+
+precis(m3f)
+dashboard(m3f)
+
+post3f <- extract.samples(m3f)
+p3f <- inv_logit( post3f$a )
+precis( list(p=p3f) , prob=0.95 )
+
 # dyads only
 m4 <- ulam(
     alist(
@@ -142,10 +200,12 @@ compare( m1 , m2 , m3 , m4 )
 # plot post against prior
 p_prior <- inv_logit( rnorm(1e4,0,1.5) )
 post1 <- extract.samples(m1)
+post1f <- extract.samples(m1f)
 
 blank2(h=0.6)
 
-dens( post1$p , lwd=1.5 , xlab="extra-pair paternity" , xlim=c(0,1) )
+dens( post1$p , lwd=1.5 , xlab="extra-pair paternity" , xlim=c(0,1) , col=col.alpha("black",0.4) )
+dens( post1f$p , lwd=1.5 , add=TRUE )
 
 #dens( p , lwd=1.5 , add=TRUE , col="red" )
 
@@ -155,8 +215,11 @@ text( 0.58 , 8 , "raw" , cex=0.8 )
 text( 0.72 , 4 , "clustered" , cex=0.8 , col="red" )
 text( 0.8 , 2 , "prior" , cex=0.8 )
 
-dens( p3 , add=TRUE , col="red" , lwd=1.5 )
+dens( p3f , add=TRUE , col="red" , lwd=1.5 )
+dens( p3 , add=TRUE , col=col.alpha("red",0.4) , lwd=1.5 )
 #dens( p4 , add=TRUE , col="blue" , lwd=1.5 )
+
+
 
 # variance among moms
 blank2(h=0.6)
@@ -182,6 +245,6 @@ mtext( "EPP by mother-husband dyad" )
 
 # trace plots
 
-traceplot( m3 , pars=c("a","sigma","tau","z[1]","z[2]","z[3]","x[1]","x[2]","x[3]") )
+traceplot( m3f , pars=c("a","sigma","tau","z[1]","z[2]","z[3]","x[1]","x[2]","x[3]") )
 
-trankplot( m3 , pars=c("a","sigma","tau","z[1]","z[2]","z[3]","x[1]","x[2]","x[3]") )
+trankplot( m3f , pars=c("a","sigma","tau","z[1]","z[2]","z[3]","x[1]","x[2]","x[3]") )

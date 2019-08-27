@@ -85,6 +85,8 @@
 
 The sample comprises mothers with varying numbers of both children and husbands. In principle, each mother and mother-husband pair could have a unique extra-pair paternity (EPP) rate. Estimates of both the average rate and the variation among mothers and mother-husband pairs can be constructed with a multilevel analysis.
 
+\subsection*{Statistical model}
+
 Let $y_i \in \{0,1\}$ be the EPP status of child $i$. Each child has a corresponding mother with index $\textsc{mom}[i]$ and a dyad comprising the mother and the child's social father with index $\textsc{dyad}[i]$. Then the probability of $y_i$ is given by:
 \begin{align*}
 	y_i &\sim \mathrm{Bernoulli}(p_i)\\
@@ -102,7 +104,20 @@ The model uses a non-centered parameterization, but is in fact an ordinary multi
 \end{align*}
 The $\mr{Normal}(0,1.5)$ prior for $\alpha$ establishes a uniform prior on the probability scale and Half-Normal(0,1) indicates a normal distribution defined only on positive reals.
 
-We implemented the model in Stan 2.18 (\texttt{mc-stan.org}), a library for Bayesian model construction and fitting. A copy of the script is available at \texttt{LINK}. We drew 8000 samples from 4 chains. All R-hat values were less than 1.01, and there were no divergent transitions or other signs of biased posterior exploration. We show the trace plots for the hyper-parameters and a selection of the varying effects on the next page. We also show the same traces as rank histograms (https://arxiv.org/abs/1903.08008), which make it much easier to spot problems with chains. Healthy chains, like these, should be relatively uniform.
+\subsection*{Measurement error}
+
+A complication in this analysis is that there is as much as 5\% false assignment of paternity. Failing to account for this would artificially inflate our estimate of EPP. We incorporate false-positives into our model by using a mixture likelihood. Given false-positive probability $f$, the probability of observing a paternity assignment $y_i=1$ is:
+\begin{align*}
+	\Pr( y_i=1 | p_i ) = (1-f\,) p_i + f\, (1 - p_i)
+\end{align*}
+Since false negatives are extremely unlikely in our analysis, the probability of observing $y_i=0$ remains unchanged:
+\begin{align*}
+	\Pr( y_i=0 | p_i ) = 1 - p_i
+\end{align*}
+
+\subsection*{Implementation}
+
+We implemented the model in Stan 2.19 (\texttt{mc-stan.org}), a library for Bayesian model construction and fitting. A copy of the script is available at \texttt{LINK}. We drew 8000 samples from 4 chains. All R-hat values were less than 1.01, and there were no divergent transitions or other signs of biased posterior exploration. We show the trace plots for the hyper-parameters and a selection of the varying effects on the next page. We also show the same traces as rank histograms (https://arxiv.org/abs/1903.08008), which make it much easier to spot problems with chains. Healthy chains, like these, should be relatively uniform.
 
 \begin{figure}[p]
 \begin{center}
@@ -116,19 +131,22 @@ We implemented the model in Stan 2.18 (\texttt{mc-stan.org}), a library for Baye
 
 The marginal posterior distributions for $\alpha$, $\sigma$, and $\tau$ are summarized below.
 \begin{verbatim}
-      mean   sd  5.5% 94.5% n_eff Rhat
-a     0.11 0.33 -0.39  0.64  6776    1
-sigma 0.67 0.48  0.07  1.57  1198    1
-tau   1.89 0.48  1.16  2.68  2597    1
+       mean   sd  5.5% 94.5% n_eff Rhat
+a     -0.07 0.36 -0.63  0.51  6422    1
+sigma  0.75 0.55  0.07  1.75  1216    1
+tau    2.01 0.54  1.18  2.89  2325    1
 \end{verbatim}
-On the probability scale, $\alpha$ implies an average posterior EPP rate with mean 0.53 and 95\% credible interval from 0.37 to 0.68. The posterior distribution EPP rate is plotted below in red, against both the prior (dashed) and the naive posterior rate from ignoring clustering by mothers and mother-father dyads (black).
+On the probability scale, $\alpha$ implies an average posterior EPP rate with mean 0.48 and 95\% credible interval from 0.32 to 0.66. Note that there is more variation among dyads ($\tau$) than among mothers ($\sigma$). This implies that features of specific pairings explain EPP variation more than features of specific women.
+
+The posterior distribution EPP rate is plotted below in red, against both the prior (dashed) and the naive posterior rate from ignoring clustering by mothers and mother-father dyads (black). 
+We also considered models with no clustering (the black density in the above figure), with clustering only by mother, and clustering only by dyad. All models with clustering produce similar inferences. Code for each, together with WAIC model comparison, can be found in the script (LINK). 
+For comparison, models which do not include potential false-positives are shown in lighter colors.
+
 \begin{center}
 	\includegraphics[scale=1]{EPP_posterior.pdf}
 \end{center}
 
-We also considered models with no clustering (the black density in the above figure), with clustering only by mother, and clustering only by dyad. All models with clustering produce similar inferences. Code for each, together with WAIC model comparison, can be found in the script (LINK).
 
-Note that there is more variation among dyads ($\tau$) than among mothers ($\sigma$). This implies that features of specific pairings explain EPP variation more than features of specific women.
 
 %\clearpage
 %\bibliographystyle{newapa}
