@@ -108,11 +108,11 @@ The $\mr{Normal}(0,1.5)$ prior for $\alpha$ establishes a uniform prior on the p
 
 A complication in this analysis is that there is as much as 5\% false assignment of paternity. Failing to account for this would artificially inflate our estimate of EPP. We incorporate false-positives into our model by using a mixture likelihood. Given false-positive probability $f$, the probability of observing a paternity assignment $y_i=1$ is:
 \begin{align*}
-	\Pr( y_i=1 | p_i ) = (1-f\,) p_i + f\, (1 - p_i)
+	\Pr( y_i=1 | p_i ) = p_i + f\, (1 - p_i)
 \end{align*}
-Since false negatives are extremely unlikely in our analysis, the probability of observing $y_i=0$ remains unchanged:
+Since false negatives are extremely unlikely in our analysis, the probability of observing $y_i=0$ is:
 \begin{align*}
-	\Pr( y_i=0 | p_i ) = 1 - p_i
+	\Pr( y_i=0 | p_i ) = (1-f)(1 - p_i)
 \end{align*}
 
 \subsection*{Implementation}
