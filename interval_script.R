@@ -61,16 +61,15 @@ m1 <- ulam(
 precis(m1,prob=0.95)
 
 # incorporating 5% false positive paternity assignment
+dat_list$f <- 0.05
 m1f <- ulam(
     alist(
-        y|y==1 ~ custom( log_mix( 
-            0.95 ,
-            bernoulli_lpmf( 1 | p ),
-            bernoulli_lpmf( 0 | p )
-        )),
-        y|y==0 ~ bernoulli( p ),
+        y|y==1 ~ custom( log( p + (1-p)*f ) ),
+        y|y==0 ~ custom( log( (1-p)*(1-f) ) ),
         p ~ beta(2,2) # 2,20 gives a prior skewed to small values
     ) , data=dat_list , chains=4 , sample=TRUE )
+
+precis( m1f , prob=0.95 )
 
 # model clustering on mom
 # need to use non-centered parameterization due to sparseness for many mothers
@@ -92,12 +91,8 @@ precis(list(p=p),prob=0.95)
 # with false positive rate
 m2f <- ulam(
     alist(
-        y|y==1 ~ custom( log_mix( 
-            0.95 ,
-            bernoulli_lpmf( 1 | p ),
-            bernoulli_lpmf( 0 | p )
-        )),
-        y|y==0 ~ bernoulli( p ),
+        y|y==1 ~ custom( log( p + (1-p)*f ) ),
+        y|y==0 ~ custom( log( (1-p)*(1-f) ) ),
         logit(p) <- a + z[mom_id]*sigma,
         a ~ normal(0,1.5),
         z[mom_id] ~ normal(0,1),
@@ -143,14 +138,11 @@ p3 <- inv_logit( post3$a )
 precis( list(p=p3) , prob=0.95 )
 
 # now with false positive rate
+dat_list$f <- 0.05
 m3f <- ulam(
     alist(
-        y|y==1 ~ custom( log_mix( 
-            0.95 ,
-            bernoulli_lpmf( 1 | p ),
-            bernoulli_lpmf( 0 | p )
-        )),
-        y|y==0 ~ bernoulli( p ),
+        y|y==1 ~ custom( log( p + (1-p)*f ) ),
+        y|y==0 ~ custom( log( (1-p)*(1-f) ) ),
         logit(p) <- a + z[mom_id]*sigma + x[dyad_id]*tau,
         a ~ normal(0,1.5),
         z[mom_id] ~ normal(0,1),
@@ -166,6 +158,29 @@ dashboard(m3f)
 post3f <- extract.samples(m3f)
 p3f <- inv_logit( post3f$a )
 precis( list(p=p3f) , prob=0.95 )
+
+# summary of intervals from 1 and 3, with and without false positives
+post <- extract.samples(m1)
+p1 <- post$p
+post <- extract.samples(m1f)
+p1f <- post$p
+post <- extract.samples(m3)
+p3 <- inv_logit( post$a )
+post <- extract.samples(m3f)
+p3f <- inv_logit( post$a )
+
+precis( list( p1=p1 , p1f=p1f ) , prob=0.95 )
+precis( list( p3=p3 , p3f=p3f ) , prob=0.95 )
+
+#'data.frame': 2000 obs. of 2 variables:
+#    mean   sd 2.5% 97.5%     histogram
+#p1  0.49 0.04 0.41  0.55  ▁▁▁▂▅▇▇▇▃▂▁▁
+#p1f 0.46 0.04 0.39  0.53 ▁▁▁▂▃▇▇▇▅▃▂▁▁
+#> precis( list( p3=p3 , p3f=p3f ) , prob=0.95 )
+#'data.frame': 8000 obs. of 2 variables:
+#    mean   sd 2.5% 97.5%      histogram
+#p3  0.53 0.08 0.38  0.68  ▁▁▁▁▃▅▇▅▃▁▁▁▁
+#p3f 0.48 0.09 0.32  0.66 ▁▁▁▁▃▇▇▇▃▂▁▁▁▁
 
 # dyads only
 m4 <- ulam(
